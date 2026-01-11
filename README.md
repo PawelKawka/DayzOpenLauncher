@@ -32,10 +32,9 @@ A simple Python TUI launcher for Windows PowerShell and Linux terminals that all
    ./install.sh
    ```
 
-## Requirements
+## Windows SmartScreen Warning
 
-- **Linux:** Python 3.10+ (if running from source).
-- **Windows:** Windows 10/11.
+- Because this project is free and open source the installer does not come with a digital certificate. Windows may display a SmartScreen message when you first run it.
 
 ## API
 
@@ -46,6 +45,6 @@ A simple Python TUI launcher for Windows PowerShell and Linux terminals that all
 
 ## About
 - The program is multi platform (Windows/Linux).
-- This is NOT a finished version; it may be limited and have bugs. Everything is in development.
-- The Linux launcher and scripts have been tested on Debian/Ubuntu.
+- Everything is in development.
+- The Linux launcher and install cript have been tested on Debian/Ubuntu.
 
