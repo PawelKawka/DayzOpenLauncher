@@ -12,11 +12,16 @@ class LiveUpdater:
         self.last_queries = {}
 
     def query_worker(self, server):
+        if not self.running:
+            return False
         try:
             ip = server.get('ip')
             q_port = server.get('query_port') or server.get('port')
             if ip and q_port:
                 live_data = self.browser.query_server(ip, server.get('port'), q_port)
+                
+                if not self.running:
+                    return False
                 
                 if "error" not in live_data:
                     self.live_info[(ip, server.get('port'))] = {

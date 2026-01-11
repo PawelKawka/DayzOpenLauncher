@@ -6,6 +6,7 @@ from prompt_toolkit.formatted_text import ANSI, HTML
 from prompt_toolkit.layout import HSplit, VSplit, Window
 from prompt_toolkit.widgets import Frame,  Label
 from prompt_toolkit.layout.controls import FormattedTextControl
+from constants import VERSION, BUILD_INFO
 
 class ViewRenderer:
     def __init__(self, config, app_instance=None):
@@ -23,7 +24,7 @@ class ViewRenderer:
         return HTML("".join(parts))
 
     def get_footer_text(self):
-        footer = " <b>F1-F5</b>: Tabs | <b>F6</b>: Refresh | <b>SPACE</b>: Fav | <b>Ctrl+C</b>: Quit | <b>PageUp/PageDown</b>: Scroll Page "
+        footer = f" <b>F1-F6</b>: Tabs | <b>F7</b>: Fav | <b>F8</b>: Refresh | <b>Ctrl+C</b>: Quit | <b>PageUp/PageDown</b>: Scroll Page | <b>Build:</b> {BUILD_INFO} "
         return HTML(footer)
 
     def get_settings_view(self, nick_input, dayz_path_input):

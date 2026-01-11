@@ -3,8 +3,16 @@ import sys
 import platform
 import threading
 import time
+import traceback
 
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if getattr(sys, 'frozen', False):
+    root_dir = os.path.dirname(sys.executable)
+    internal_dir = os.path.join(root_dir, "_internal")
+    if os.path.exists(internal_dir):
+        sys.path.insert(0, internal_dir)
+else:
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 sys.path.insert(0, root_dir)
 
 try:
@@ -14,8 +22,9 @@ try:
     from prompt_toolkit.filters import Condition
     from prompt_toolkit.widgets import Frame, TextArea, Label, Button, Shadow, RadioList
     from prompt_toolkit.patch_stdout import patch_stdout
-except ImportError:
-    print("Error: Missing libraries. Run: pip install rich prompt_toolkit requests python-a2s")
+except ImportError as e:
+    print(f"Error: Missing libraries or import error: {e}")
+    traceback.print_exc()
     sys.exit(1)
 
 from data_manager import DataManager
@@ -25,14 +34,18 @@ from server_actions import ServerActions
 from views import ViewRenderer
 from keybindings import KeyBinder
 from constants import VERSION, APP_NAME, DEFAULT_PROFILE_NAME
+from ui_layout import UILayout
 
 if platform.system() == "Windows":
     try:
-        from windows.utils import get_steam_path, get_dayz_path
-    except ImportError:
+        from windows.utils import setup_env, get_steam_path, get_dayz_path
+        setup_env()
+    except Exception:
         def get_steam_path(): return None
         def get_dayz_path(p): return None
 else:
+    # linux
+    sys.stdout.write("\x1b]2;DayzOpenLauncher\x07")
     try:
         from linux.utils import get_steam_path, get_dayz_path
     except ImportError:
@@ -41,6 +54,7 @@ else:
 
 class DayZLauncherTUI:
     def __init__(self):
+        self.running = True
         self.data_manager = DataManager()
         self.mod_manager = ModManager(self.data_manager.config)
         self.server_actions = ServerActions(self.data_manager.config)
@@ -50,7 +64,7 @@ class DayZLauncherTUI:
         sys_type = platform.system()
         is_linux = sys_type == "Linux"
         
-        # Validate path
+        # validate path
         path_invalid = False
         if current_path and current_path != "CANNOT FIND PATH":
             if is_linux and ("\\" in current_path or ":" in current_path):
@@ -71,9 +85,10 @@ class DayZLauncherTUI:
         self.refresh_lock = threading.Lock()
         self.search_timer = None
         self.current_tab = "GLOBAL" 
-        self.tabs = ["GLOBAL", "FAVORITES", "RECENT", "SETTINGS", "MODS"]
+        self.tabs = ["GLOBAL", "FAVORITES", "RECENT", "SETTINGS", "MODS", "UPDATES"]
         self.show_launch_dialog = False
         self.launch_message = ""
+        self.latest_update_info = None
         
         self.live_updater = LiveUpdater(
              self.data_manager.browser, 
@@ -81,13 +96,23 @@ class DayZLauncherTUI:
              lambda: self.app.invalidate() if hasattr(self, 'app') else None
         )
 
-        self._init_widgets()
+        self.ui_layout = UILayout(self, self.view_renderer)
+        self.ui_layout.init_widgets()
         
         self.key_binder = KeyBinder(self)
         self.kb = self.key_binder.get_global_bindings()
-        self.content_control.key_bindings = self.key_binder.get_list_bindings()
         
-        self._init_layout()
+        list_kb = self.key_binder.get_list_bindings()
+        self.content_control.key_bindings = list_kb
+        
+        self.root_container = self.ui_layout.init_layout()
+
+        self.app = Application(
+            layout=Layout(self.root_container, focused_element=self.content_control),
+            key_bindings=self.kb,
+            mouse_support=True,
+            full_screen=True,
+        )
 
         self.live_updater.start_loop(
             lambda: self.data_manager.filtered_servers,
@@ -97,11 +122,16 @@ class DayZLauncherTUI:
         self.refresh_data()
         self._start_mod_loop()
 
+        from update_checker import UpdateChecker
+        self.update_checker = UpdateChecker(self)
+        self.update_checker.start_check()
+
     def _start_mod_loop(self):
         def _mod_checker():
-            while True:
+            while self.running:
                 try:
                     time.sleep(10)
+                    if not self.running: break
                     if self.current_tab == "MODS" and not self.mod_manager.cached_installed_mods:
                         if hasattr(self, 'app'):
                             self.app.invalidate()
@@ -110,106 +140,6 @@ class DayZLauncherTUI:
         t = threading.Thread(target=_mod_checker, daemon=True)
         t.start()
 
-    def _init_widgets(self):
-        self.search_filter = TextArea(height=1, prompt=" Search: ", multiline=False)
-        self.search_filter.buffer.on_text_changed += self._on_filter_change
-        
-        search_kb = KeyBindings()
-        @search_kb.add('down')
-        @search_kb.add('up')
-        def _focus_list_from_search(event):
-            if self.data_manager.filtered_servers:
-                event.app.layout.focus(self.content_control)
-        self.search_filter.control.key_bindings = search_kb
-
-        self.nick_input = TextArea(
-            height=1, multiline=False,
-            text=str(self.data_manager.config.get("profile_name", DEFAULT_PROFILE_NAME) or "")
-        )
-        self.nick_input.buffer.on_text_changed += lambda _: self.data_manager.config.set("profile_name", self.nick_input.text)
-        
-        self.dayz_path_input = TextArea(
-            height=1, multiline=False,
-            text=str(self.data_manager.config.get("dayz_path", "") or "")
-        )
-        self.dayz_path_input.buffer.on_text_changed += lambda _: self.data_manager.config.set("dayz_path", self.dayz_path_input.text)
-
-        mods_kb = KeyBindings()
-        @mods_kb.add('right')
-        def _mods_page_next(event):
-            self.mod_manager.mods_page += 1
-            event.app.invalidate()
-        @mods_kb.add('left')
-        def _mods_page_prev(event):
-            if self.mod_manager.mods_page > 0:
-                self.mod_manager.mods_page -= 1
-            event.app.invalidate()
-
-        self.installed_mods_control = FormattedTextControl(
-            text=lambda: self.mod_manager.get_installed_mods_text(
-                width=self.app.renderer.output.get_size().columns if hasattr(self, 'app') else 80
-            ),
-            focusable=True,
-            key_bindings=mods_kb
-        )
-
-        self.launch_ok_btn = Button("OK", handler=self._close_launch)
-
-        self.content_control = FormattedTextControl(
-            text=self.get_server_list_text,
-            focusable=True
-        )
-        self.content_window = Window(content=self.content_control, cursorline=False)
-        
-        self.mod_control = FormattedTextControl(text=self.get_mod_list_text)
-
-    def _init_layout(self):
-        self.main_content = VSplit([
-            Frame(self.content_window, title="Server List"),
-            Frame(Window(content=self.mod_control), title="Server Details", width=40),
-        ])
-
-        self.mods_content = Frame(
-            Window(content=self.installed_mods_control),
-            title="Mods"
-        )
-        
-        self.settings_content = self.view_renderer.get_settings_view(
-            self.nick_input, 
-            self.dayz_path_input
-        )
-
-        def get_body():
-            if self.current_tab == "SETTINGS":
-                return self.settings_content
-            elif self.current_tab == "MODS":
-                return self.mods_content
-            return self.main_content
-
-        self.root_container = FloatContainer(
-            content=HSplit([
-                Frame(
-                    self.search_filter,
-                    title=f"{APP_NAME}"
-                ),
-                Window(content=FormattedTextControl(text=lambda: self.view_renderer.get_tabs_text(self.current_tab, self.tabs)), height=1),
-                DynamicContainer(get_body), 
-                Window(content=FormattedTextControl(text=lambda: self.view_renderer.get_footer_text()), height=1),
-            ]),
-            floats=[
-                Float(content=ConditionalContainer(
-                    content=self.get_launch_dialog(),
-                    filter=Condition(lambda: self.show_launch_dialog)
-                ))
-            ]
-        )
-
-        self.app = Application(
-            layout=Layout(self.root_container, focused_element=self.content_control),
-            key_bindings=self.kb,
-            mouse_support=True,
-            full_screen=True,
-        )
 
 
     def _close_launch(self):
@@ -233,6 +163,9 @@ class DayZLauncherTUI:
                 self.data_manager.loading = False
                 if hasattr(self, 'app'): self.app.invalidate()
                 self.refresh_lock.release()
+            
+            if hasattr(self, 'update_checker'):
+                self.update_checker.start_check()
 
         threading.Thread(target=_worker, daemon=True).start()
 
@@ -269,6 +202,9 @@ class DayZLauncherTUI:
         self.selected_index = 0
         self.update_filtered()
         
+        if hasattr(self, 'app'):
+            self.app.invalidate()
+        
         try:
             if tab_name == "SETTINGS":
                 self.app.layout.focus(self.nick_input)
@@ -276,12 +212,23 @@ class DayZLauncherTUI:
             elif tab_name == "MODS":
                 self.mod_manager.clear_cache() #ref mods on entry
                 self.app.layout.focus(self.installed_mods_control)
+            elif tab_name == "UPDATES":
+                 # focus the updates text control if available
+                 try:
+                     self.app.layout.focus(self.updates_control)
+                 except:
+                     self.app.layout.focus(self.search_filter)
             else:
                 self.app.layout.focus(self.content_control)
         except (ValueError, AttributeError):
-            pass
+            # fallback
+            try:
+                self.app.layout.focus(self.search_filter)
+            except:
+                pass
             
-        self.app.invalidate()
+        if hasattr(self, 'app'):
+            self.app.invalidate()
 
     def join_server_wrapper(self, server):
         def on_start(msg):
@@ -326,16 +273,6 @@ class DayZLauncherTUI:
             
         return self.mod_manager.get_mod_list_text(server, live)
 
-    def get_launch_dialog(self):
-        return Shadow(
-            body=Frame(
-                HSplit([
-                    Label(text=lambda: self.launch_message),
-                ], padding=1),
-                title="Launching Game",
-                width=50,
-            )
-        )
 
     def run(self):
         try:
@@ -344,14 +281,30 @@ class DayZLauncherTUI:
                     self.app.run()
                 except (KeyboardInterrupt, EOFError):
                     pass
+        except Exception as e:
+            with open("crash_log.txt", "w") as f:
+                import traceback
+                traceback.print_exc(file=f)
         finally:
-            try:
+            self._cleanup()
+
+    def _cleanup(self):
+        self.running = False
+        try:
+            if hasattr(self, 'live_updater'):
                 self.live_updater.stop()
-            except:
-                pass
-            
+            if hasattr(self, 'data_manager') and hasattr(self.data_manager, 'browser'):
+                self.data_manager.browser.close()
+        except:
+            pass
+        
+        try:
             sys.stdout.write("\033[?1000l\033[?1002l\033[?1003l\033[?1004l\033[?1005l\033[?1006l\033[?1015l\033[?25h")
             sys.stdout.flush()
+        except:
+            pass
+
+        os._exit(0)
 
 if __name__ == "__main__":
     tui = DayZLauncherTUI()

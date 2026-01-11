@@ -15,6 +15,12 @@ class ServerBrowser:
         self.cached_full_list = []
         self.session = requests.Session()
 
+    def close(self):
+        try:
+            self.session.close()
+        except:
+            pass
+
     def fetch_global_servers(self, search_text=None, page_limit=None, force=False):
         search_text = (search_text or "").lower()
         

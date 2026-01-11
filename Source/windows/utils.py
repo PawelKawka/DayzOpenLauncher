@@ -1,6 +1,15 @@
 import winreg
 import os
 import re
+import ctypes
+
+def setup_env():
+    try:
+        app_id = 'DayzOpenLauncher'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+        ctypes.windll.kernel32.SetConsoleTitleW("DayzOpenLauncher")
+    except Exception:
+        pass
 
 def get_steam_path():
     try:

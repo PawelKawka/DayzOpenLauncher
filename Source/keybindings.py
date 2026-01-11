@@ -1,5 +1,5 @@
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.filters import has_focus
+from prompt_toolkit.filters import has_focus, Condition
 
 class KeyBinder:
     def __init__(self, tui):
@@ -65,7 +65,7 @@ class KeyBinder:
                 pass
 
 
-        @kb.add('f6')
+        @kb.add('f8')
         def _refresh(event):
             self.tui.refresh_data()
 
@@ -79,15 +79,39 @@ class KeyBinder:
         def _settings(event): self.tui.switch_tab("SETTINGS")
         @kb.add('f5')
         def _mods(event): self.tui.switch_tab("MODS")
+        @kb.add('f6')
+        def _updates(event): self.tui.switch_tab("UPDATES")
+        
+        @kb.add('enter', filter=Condition(lambda: self.tui.current_tab == "UPDATES" and not self.tui.show_launch_dialog))
+        def _open_update_link(event):
+            if self.tui.latest_update_info:
+                import webbrowser
+                webbrowser.open(self.tui.latest_update_info.get("url", "https://github.com/PawelKawka/DayzOpenLauncher/releases"))
+
+        @kb.add('f7')
+        def _favorite_global(event):
+            if self.tui.current_tab in ["GLOBAL", "FAVORITES", "RECENT"]:
+                 if self.tui.data_manager.filtered_servers:
+                    server = self.tui.data_manager.filtered_servers[self.tui.selected_index]
+                    self.tui.server_actions.toggle_favorite(server)
+                    self.tui.update_filtered()
+                    event.app.invalidate()
+
         @kb.add('down', filter=has_focus(self.tui.nick_input))
         def _focus_dayz_path(event):
-            event.app.layout.focus(self.tui.dayz_path_input)
-            self.tui.dayz_path_input.buffer.cursor_position = len(self.tui.dayz_path_input.text)
+            try:
+                event.app.layout.focus(self.tui.dayz_path_input)
+                self.tui.dayz_path_input.buffer.cursor_position = len(self.tui.dayz_path_input.text)
+            except:
+                pass
 
         @kb.add('up', filter=has_focus(self.tui.dayz_path_input))
         def _focus_nick(event):
-            event.app.layout.focus(self.tui.nick_input)
-            self.tui.nick_input.buffer.cursor_position = len(self.tui.nick_input.text)
+            try:
+                event.app.layout.focus(self.tui.nick_input)
+                self.tui.nick_input.buffer.cursor_position = len(self.tui.nick_input.text)
+            except:
+                pass
 
         return kb
 
@@ -148,14 +172,20 @@ class KeyBinder:
                 except:
                     pass
 
-        @kb.add('enter')
+        @kb.add('enter', filter=Condition(lambda: not self.tui.show_launch_dialog))
         def _join(event):
-            if self.tui.data_manager.filtered_servers:
-                server = self.tui.data_manager.filtered_servers[self.tui.selected_index]
-                self.tui.join_server_wrapper(server)
+            try:
+                if self.tui.current_tab == "UPDATES":
+                    return
 
-        @kb.add('space')
-        @kb.add('s')
+                if self.tui.data_manager.filtered_servers:
+                    server = self.tui.data_manager.filtered_servers[self.tui.selected_index]
+                    self.tui.join_server_wrapper(server)
+            except Exception as e:
+                with open("key_error.log", "a") as f:
+                    f.write(f"Join error: {e}\n")
+
+        @kb.add('f7')
         def _favorite(event):
             if self.tui.data_manager.filtered_servers:
                 server = self.tui.data_manager.filtered_servers[self.tui.selected_index]

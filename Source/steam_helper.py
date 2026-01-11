@@ -19,7 +19,13 @@ class SteamHelper:
         if not STEAMWORKS:
             return False
             
-        root_dir = os.getcwd()
+        if getattr(sys, 'frozen', False):
+            root_dir = os.path.dirname(sys.executable)
+        else:
+            root_dir = os.path.dirname(os.path.abspath(__file__))
+            if os.path.basename(root_dir) == "Source":
+                root_dir = os.path.dirname(root_dir)
+                
         appid_path = os.path.join(root_dir, "steam_appid.txt")
         if not os.path.exists(appid_path):
             try:
