@@ -22,6 +22,10 @@ A simple Python TUI launcher for Windows PowerShell and Linux terminals that all
 3. Run the installer and follow the instructions.
 4. Launch the app via the Desktop shortcut or Start Menu.
 
+#### Windows SmartScreen Warning
+
+- Because this project is free and open source the installer does not come with a digital certificate. Windows may display a SmartScreen message when you first run it.
+
 ### Linux
 1. Go to the [Releases](https://github.com/PawelKawka/DayzOpenLauncher/releases) page.
 2. Download the `dayzopenlauncher-linux` and extract it.
@@ -32,9 +36,13 @@ A simple Python TUI launcher for Windows PowerShell and Linux terminals that all
    ./install.sh
    ```
 
-## Windows SmartScreen Warning
+#### Removing
 
-- Because this project is free and open source the installer does not come with a digital certificate. Windows may display a SmartScreen message when you first run it.
+ - To remove the launcher, run the following command in the extracted folder:
+
+```bash
+./install.sh --uninstall
+```
 
 ## API
 
