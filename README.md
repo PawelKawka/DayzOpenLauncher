@@ -54,5 +54,5 @@ A simple Python TUI launcher for Windows PowerShell and Linux terminals that all
 ## About
 - The program is multi platform (Windows/Linux).
 - Everything is in development.
-- The Linux launcher and install cript have been tested on Debian/Ubuntu.
+- The Linux launcher and install script have been tested on Debian/Ubuntu.
 
