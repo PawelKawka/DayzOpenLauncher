@@ -2,7 +2,7 @@
 set -e
 
 APP_NAME="DayzOpenLauncher"
-REPO="PawelKawka/dev.dol"
+REPO="PawelKawka/DayzOpenLauncher"
 INSTALL_DIR="$HOME/.local/share/$APP_NAME"
 BIN_DIR="/usr/local/bin"
 
