@@ -1,4 +1,5 @@
 import textwrap
+import platform
 from prompt_toolkit.layout import Layout, HSplit, VSplit, Window, FormattedTextControl, FloatContainer, Float, DynamicContainer, ConditionalContainer
 from prompt_toolkit.widgets import Frame, TextArea, Label, Button, Shadow
 from prompt_toolkit.key_binding import KeyBindings
@@ -172,5 +173,11 @@ class UILayout:
                 res.append(("", "  ...\n"))
         
         res.append(("", "\n"))
-        res.append(("ansigreen bold", " Press ENTER to open download page\n"))
+        
+        if platform.system() == "Linux":
+            update_text = " Press ENTER to start update process\n"
+        else:
+            update_text = " Press ENTER to open browser and download setup\n"
+            
+        res.append(("ansigreen bold", update_text))
         return res

@@ -89,6 +89,7 @@ class DayZLauncherTUI:
         self.show_launch_dialog = False
         self.launch_message = ""
         self.latest_update_info = None
+        self.run_update_on_exit = False
         
         self.live_updater = LiveUpdater(
              self.data_manager.browser, 
@@ -304,7 +305,8 @@ class DayZLauncherTUI:
         except:
             pass
 
-        os._exit(0)
+        if not self.run_update_on_exit:
+            os._exit(0)
 
 if __name__ == "__main__":
     tui = DayZLauncherTUI()

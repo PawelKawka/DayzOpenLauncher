@@ -83,10 +83,13 @@ class KeyBinder:
         def _updates(event): self.tui.switch_tab("UPDATES")
         
         @kb.add('enter', filter=Condition(lambda: self.tui.current_tab == "UPDATES" and not self.tui.show_launch_dialog))
-        def _open_update_link(event):
+        def _start_update(event):
             if self.tui.latest_update_info:
-                import webbrowser
-                webbrowser.open(self.tui.latest_update_info.get("url", "https://github.com/PawelKawka/DayzOpenLauncher/releases"))
+                if hasattr(self.tui, 'update_checker'):
+                    self.tui.update_checker.start_update_process()
+                else:
+                    import webbrowser
+                    webbrowser.open(self.tui.latest_update_info.get("url", "https://github.com/PawelKawka/DayzOpenLauncher/releases"))
 
         @kb.add('f7')
         def _favorite_global(event):

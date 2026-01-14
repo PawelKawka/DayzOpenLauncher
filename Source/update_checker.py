@@ -2,6 +2,11 @@ import threading
 import time
 import requests
 import webbrowser
+import os
+import sys
+import subprocess
+import platform
+from pathlib import Path
 from prompt_toolkit.filters import Condition
 from constants import VERSION
 
@@ -43,3 +48,16 @@ class UpdateChecker:
                 pass
                 
         threading.Thread(target=_check, daemon=True).start()
+
+    def start_update_process(self):
+        if platform.system() != "Linux":
+            webbrowser.open(self.tui.latest_update_info.get("url", ""))
+            return
+
+        try:
+            self.tui.run_update_on_exit = True
+            if hasattr(self.tui, 'app'):
+                self.tui.app.exit()
+        except Exception as e:
+            import logging
+            logging.error(f"Error initiating update: {e}")
