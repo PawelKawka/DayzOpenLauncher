@@ -28,7 +28,7 @@ else
     echo "221100" > "dist/$APP_NAME/steam_appid.txt"
 fi
 
-VERSION="1.1.0"
+VERSION="1.1.1"
 echo "$VERSION" > "dist/$APP_NAME/version.txt"
 echo "$VERSION" > "version.txt"
 
