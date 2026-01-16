@@ -17,7 +17,7 @@ AppUpdatesURL=https://github.com/PawelKawka/PawelKawka/releases
 
 DefaultDirName={localappdata}\DayzOpenLauncher
 DefaultGroupName=DayzOpenLauncher
-UninstallDisplayIcon={app}\DayzOpenLauncher.exe
+UninstallDisplayIcon={app}\icon.ico
 
 OutputDir=.
 OutputBaseFilename=DayzOpenLauncher_Setup
