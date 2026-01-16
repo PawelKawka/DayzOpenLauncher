@@ -13,8 +13,7 @@ rm -rf build dist
 
 PYINSTALLER="python3 -m PyInstaller"
 
-$PYINSTALLER --noconfirm --onedir --clean --name "$APP_NAME" \
-    Source/main.py
+$PYINSTALLER --noconfirm DayzOpenLauncher_linux.spec
 
 echo "[*] building updater..."
 $PYINSTALLER --noconfirm --onefile --clean --name "updater" \
