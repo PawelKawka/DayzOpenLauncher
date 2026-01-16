@@ -11,7 +11,7 @@ AppName=DayzOpenLauncher
 AppVersion={#AppBaseVersion} ({#AppBuildDate}) {#AppBuildNum}
 AppVerName=DayzOpenLauncher {#AppBaseVersion}
 UninstallDisplayName=DayzOpenLauncher
-AppPublisher=Pawel
+AppPublisher=PawelKawka
 AppPublisherURL=https://github.com/PawelKawka/DayzOpenLauncher
 AppUpdatesURL=https://github.com/PawelKawka/PawelKawka/releases
 
